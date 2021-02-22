@@ -10,20 +10,31 @@ namespace BookClub.Data
     public class BookRepository : IBookRepository
     {
         private readonly IDbConnection _db;
-        private readonly ILogger<BookRepository> _logger;
+        private readonly ILogger _logger;
 
-        public BookRepository(IDbConnection db, ILogger<BookRepository> logger)
+        public BookRepository(IDbConnection db, ILoggerFactory loggerFactory)
         {
             _db = db;
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger("Database");
         }
 
         public List<Book> GetAllBooks()
         {
-            _logger.LogInformation("Inside the repository about to call GetAllBooks.");
-            var books = _db.Query<Book>("GetAllBooks", commandType: CommandType.StoredProcedure)
-                .ToList();
-            return books;
+            // most beneficial for some kind of db transaction potentially
+            using (_logger.BeginScope("Doing database work"))  
+            {
+                //_logger.LogInformation("Inside the repository about to call GetAllBooks.");                        
+                _logger.RepoGetBooks();
+
+                //_logger.LogDebug(DataEvents.GetMany, "Debugging information for stored proc: {ProcName}", 
+                //                 "GetAllBooks");
+                _logger.RepoCallGetMany("GetAllBooks");
+
+                var books = _db.Query<Book>("GetAllBooks", commandType: CommandType.StoredProcedure)
+                    .ToList();
+                return books;
+            }
+            
         }
 
         public void SubmitNewBook(Book bookToSubmit, int submitter)
@@ -31,7 +42,7 @@ namespace BookClub.Data
             _db.Execute("InsertBook", new {
                 bookToSubmit.Title,
                 bookToSubmit.Author,
-                Classification = bookToSubmit.Category,
+                bookToSubmit.Classification,
                 bookToSubmit.Genre,
                 bookToSubmit.Isbn,
                 submitter

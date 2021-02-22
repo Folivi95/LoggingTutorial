@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using BookClub.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace BookClub.UI
 {
@@ -25,6 +25,8 @@ namespace BookClub.UI
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<IScopeInformation, ScopeInformation>();
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 options.CheckConsentNeeded = context => true;
@@ -68,20 +70,15 @@ namespace BookClub.UI
                     .RequireAuthenticatedUser()
                     .Build();
                 config.Filters.Add(new AuthorizeFilter(policy));
+                //config.Filters.Add(typeof(TrackPagePerformanceFilter));
             });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Error");
-                app.UseHsts();
-            }
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
+            
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
